@@ -1,35 +1,129 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard">
-    <h2>Intersections</h2>
-    <div class="intersections-grid">
-        {% for intersection in intersections %}
-        <div class="intersection-card">
-            <h3>{{ intersection.name }}</h3>
-            <p>{{ intersection.location }}</p>
-            <div class="traffic-lights">
-                {% for light in intersection.traffic_lights %}
-                <div class="traffic-light" id="light-{{ light.id }}">
-                    <div class="light red {% if light.status == 'RED' %}active{% endif %}"></div>
-                    <div class="light yellow {% if light.status == 'YELLOW' %}active{% endif %}"></div>
-                    <div class="light green {% if light.status == 'GREEN' %}active{% endif %}"></div>
-                    <div class="info">
-                        <span>{{ light.direction }}</span>
-                        <span>Density: {{ light.current_density }}</span>
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <h3>Cities</h3>
+        <ul class="city-list">
+            {% for city in cities %}
+            <li>
+                <details open>
+                    <summary>{{ city.name }}</summary>
+                    <ul>
+                        {% for area in city.areas %}
+                        <li>
+                            <details open>
+                                <summary>{{ area.name }}</summary>
+                                <ul>
+                                    {% for intersection in area.intersections %}
+                                    <li><a href="#intersection-{{ intersection.id }}">{{ intersection.name }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            </li>
+            {% endfor %}
+        </ul>
+    </aside>
+
+    <div class="main-content">
+        {% for city in cities %}
+            {% for area in city.areas %}
+                {% for intersection in area.intersections %}
+                <div id="intersection-{{ intersection.id }}" class="intersection-card">
+                    <div class="card-header">
+                        <h3>{{ intersection.name }} <span class="badge">{{ area.name }}</span></h3>
+                        <span class="location">{{ intersection.location }}</span>
                     </div>
-                    <!-- Simulation Controls -->
-                    <div class="controls">
-                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=10" hx-swap="none">Low</button>
-                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=50" hx-swap="none">Med</button>
-                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=90" hx-swap="none">High</button>
+                    
+                    <div class="traffic-lights-grid">
+                        {% for light in intersection.traffic_lights %}
+                        <div class="traffic-light-wrapper" id="light-{{ light.id }}" data-id="{{ light.id }}">
+                            <div class="traffic-light-body">
+                                <div class="light red"></div>
+                                <div class="light yellow"></div>
+                                <div class="light green"></div>
+                            </div>
+                            <div class="light-info">
+                                <span class="direction">{{ light.direction }}</span>
+                                <div class="timer">--</div>
+                                <div class="density-control">
+                                    <small>Density: <span class="density-val">{{ light.current_density }}</span></small>
+                                    <div class="btn-group">
+                                        <button onclick="updateDensity({{ light.id }}, 10)">Low</button>
+                                        <button onclick="updateDensity({{ light.id }}, 50)">Med</button>
+                                        <button onclick="updateDensity({{ light.id }}, 90)">High</button>
+                                    </div>
+                                </div>
+                                <div class="admin-control">
+                                    <button class="manual-btn" onclick="toggleManual({{ light.id }})">Manual Override</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 {% endfor %}
-            </div>
-            <button class="refresh-btn" onclick="window.location.reload()">Refresh Status</button>
-        </div>
+            {% endfor %}
         {% endfor %}
     </div>
 </div>
+
+<script>
+    // Real-time Sync Logic
+    async function syncState() {
+        try {
+            const response = await fetch('/api/v1/frontend/sync');
+            const data = await response.json();
+            
+            for (const [id, state] of Object.entries(data)) {
+                updateLight(id, state);
+            }
+        } catch (e) {
+            console.error("Sync failed", e);
+        }
+    }
+
+    function updateLight(id, state) {
+        const wrapper = document.getElementById(`light-${id}`);
+        if (!wrapper) return;
+
+        // Update Lights
+        wrapper.querySelectorAll('.light').forEach(el => el.classList.remove('active'));
+        const activeLight = wrapper.querySelector(`.light.${state.status.toLowerCase()}`);
+        if (activeLight) activeLight.classList.add('active');
+
+        // Update Timer
+        const timerEl = wrapper.querySelector('.timer');
+        if (state.end_time) {
+            const now = Date.now() / 1000;
+            const remaining = Math.max(0, Math.ceil(state.end_time - now));
+            timerEl.textContent = remaining + "s";
+        } else {
+            timerEl.textContent = "--";
+        }
+    }
+
+    async function updateDensity(id, val) {
+        await fetch(`/api/v1/frontend/simulate/${id}/density?value=${val}`, { method: 'POST' });
+    }
+
+    async function toggleManual(id) {
+        const status = prompt("Enter status (RED, YELLOW, GREEN):", "RED");
+        if (status) {
+            await fetch(`/api/v1/admin/traffic-lights/${id}/manual`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: status.toUpperCase(), duration: 60})
+            });
+        }
+    }
+
+    // Sync every 1 second
+    setInterval(syncState, 1000);
+    syncState(); // Initial call
+</script>
 {% endblock %}

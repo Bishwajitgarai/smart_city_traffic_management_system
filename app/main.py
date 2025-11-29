@@ -5,6 +5,7 @@ from app.db.base import Base
 from app.db.session import engine, SessionLocal
 
 from fastapi.staticfiles import StaticFiles
+from app.models.city import City, TrafficArea
 from app.models.intersection import Intersection
 from app.models.traffic import TrafficLight
 from fastapi.responses import RedirectResponse
@@ -24,23 +25,45 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.on_event("startup")
 def seed_data():
     db = SessionLocal()
-    if not db.query(Intersection).first():
-        # Create sample intersection
-        intersection = Intersection(name="Main St & 1st Ave", location="Downtown")
-        db.add(intersection)
+    if not db.query(City).first():
+        # Create City
+        city = City(name="Metropolis", code="MET")
+        db.add(city)
         db.commit()
-        db.refresh(intersection)
-        
-        # Create lights
-        directions = ["North", "South", "East", "West"]
-        for direction in directions:
-            light = TrafficLight(
-                intersection_id=intersection.id,
-                direction=direction,
-                status="RED" if direction in ["East", "West"] else "GREEN"
-            )
-            db.add(light)
+        db.refresh(city)
+
+        # Create Areas
+        downtown = TrafficArea(name="Downtown", code="DT", city_id=city.id)
+        uptown = TrafficArea(name="Uptown", code="UP", city_id=city.id)
+        db.add_all([downtown, uptown])
         db.commit()
+        db.refresh(downtown)
+        db.refresh(uptown)
+
+        # Create Intersections
+        intersections_data = [
+            {"name": "Main St & 1st Ave", "code": "INT-001", "area_id": downtown.id, "location": "Downtown Core"},
+            {"name": "Broadway & 5th", "code": "INT-002", "area_id": downtown.id, "location": "Financial District"},
+            {"name": "Park Ave & 59th", "code": "INT-003", "area_id": uptown.id, "location": "Residential Zone"},
+        ]
+
+        for i_data in intersections_data:
+            intersection = Intersection(**i_data)
+            db.add(intersection)
+            db.commit()
+            db.refresh(intersection)
+            
+            # Create lights
+            directions = ["North", "South", "East", "West"]
+            for direction in directions:
+                light = TrafficLight(
+                    intersection_id=intersection.id,
+                    direction=direction,
+                    status="RED" if direction in ["East", "West"] else "GREEN",
+                    duration=60
+                )
+                db.add(light)
+            db.commit()
     db.close()
 
 @app.get("/")
