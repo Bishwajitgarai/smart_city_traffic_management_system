@@ -53,7 +53,7 @@ Take control of any intersection. The system includes **"Smart Switching"** logi
 ### 3. City Management
 Easily add new Cities, Areas, and Intersections through a modern, modal-based UI.
 
-![Add City Modal](docs/images/add_city_modal.png)
+![City Management UI](docs/images/modal_fix.png)
 
 ---
 
