@@ -29,122 +29,106 @@ class TrafficController:
         }
 
     async def set_manual_state(self, light_id: int, status: str, duration: int = None):
-        light = self.db.query(TrafficLight).filter(TrafficLight.id == light_id).first()
-        if not light:
+        # Fetch all lights for this intersection to ensure atomic consistency
+        # We need to know which intersection this light belongs to first
+        target_light = self.db.query(TrafficLight).filter(TrafficLight.id == light_id).first()
+        if not target_light:
             return
             
-        intersection_id = light.intersection_id
+        intersection_id = target_light.intersection_id
+        all_lights = self.db.query(TrafficLight).filter(TrafficLight.intersection_id == intersection_id).all()
         
-        # Partner Logic: Identify partner (N<->S, E<->W)
-        partner_direction = None
-        if light.direction == "North": partner_direction = "South"
-        elif light.direction == "South": partner_direction = "North"
-        elif light.direction == "East": partner_direction = "West"
-        elif light.direction == "West": partner_direction = "East"
+        # Map lights by direction for easy access
+        lights_by_dir = {l.direction: l for l in all_lights}
+        target_light = lights_by_dir.get(target_light.direction) # Refresh reference
         
-        # Conflicting Logic: Identify cross traffic
-        conflicting_directions = []
-        if light.direction in ["North", "South"]:
-            conflicting_directions = ["East", "West"]
-        elif light.direction in ["East", "West"]:
-            conflicting_directions = ["North", "South"]
-
-        # 1. Update Primary Light
-        light.is_manual = True
-        light.status = status
-        light.last_updated = datetime.now(timezone.utc)
+        # Define conflicts
+        conflicts = {
+            "North": ["East", "West"],
+            "South": ["East", "West"],
+            "East": ["North", "South"],
+            "West": ["North", "South"]
+        }
+        
+        print(f"DEBUG: Setting manual state for {target_light.direction} to {status}")
+        
+        # 1. Update Target Light
+        target_light.is_manual = True
+        target_light.status = status
+        target_light.last_updated = datetime.now(timezone.utc)
         if duration:
-            light.duration = duration
+            target_light.duration = duration
             
-        # 2. Update Partner Light (Sync Status)
-        partner_light = self.db.query(TrafficLight).filter(
-            TrafficLight.intersection_id == intersection_id,
-            TrafficLight.direction == partner_direction
-        ).first()
+        # 2. Update Partner Light
+        partner_dir = None
+        if target_light.direction == "North": partner_dir = "South"
+        elif target_light.direction == "South": partner_dir = "North"
+        elif target_light.direction == "East": partner_dir = "West"
+        elif target_light.direction == "West": partner_dir = "East"
         
+        partner_light = lights_by_dir.get(partner_dir)
         if partner_light:
+            print(f"DEBUG: Updating partner {partner_dir}")
             partner_light.is_manual = True
             partner_light.status = status
             partner_light.last_updated = datetime.now(timezone.utc)
             if duration:
                 partner_light.duration = duration
 
-        # 3. Update Conflicting Lights (Force RED if Primary is GREEN)
-        conflicting_lights = self.db.query(TrafficLight).filter(
-            TrafficLight.intersection_id == intersection_id,
-            TrafficLight.direction.in_(conflicting_directions)
-        ).all()
+        # 3. Handle Conflicts (Force RED if Green/Yellow)
+        if status in ["GREEN", "YELLOW"]:
+            print(f"DEBUG: Checking conflicts for {target_light.direction}")
+            for conflict_dir in conflicts.get(target_light.direction, []):
+                conflict_light = lights_by_dir.get(conflict_dir)
+                if conflict_light:
+                    print(f"DEBUG: Forcing conflict {conflict_dir} to RED")
+                    # Force conflict to RED
+                    conflict_light.status = "RED"
+                    conflict_light.is_manual = True
+                    conflict_light.last_updated = datetime.now(timezone.utc)
+                    conflict_light.duration = target_light.duration # Sync duration
         
-        redis = await get_redis()
-        from app.api.v1.endpoints.websocket import broadcast_state_update, broadcast_batch_update
-        
-        # Calculate End Time (shared for all affected lights)
-        end_time = (datetime.now(timezone.utc) + timedelta(seconds=light.duration)).timestamp()
-        
-        updates = []
-        
-        if status == "GREEN":
-            for conflict in conflicting_lights:
-                if conflict.status != "RED":
-                    conflict.status = "RED"
-                    conflict.is_manual = True
-                    conflict.last_updated = datetime.now(timezone.utc)
-                    conflict.duration = light.duration # Sync duration
-                    
-                    # Update Redis for conflict
-                    await redis.set(f"traffic_light:{conflict.id}:status", "RED")
-                    await redis.set(f"traffic_light:{conflict.id}:end_time", end_time)
-                    
-                    # Add to batch
-                    updates.append({
-                        "light_id": conflict.id,
-                        "state": {
-                            "status": "RED",
-                            "end_time": end_time
-                        }
-                    })
+        # If setting to RED, we might want to set conflicts to GREEN (Smart Switching)
+        # But only if they aren't already manually set to RED? 
+        # For safety, let's just ensure we don't leave everyone RED forever if possible,
+        # but the user asked for "Smart Switching" (Red -> Green).
         elif status == "RED":
-            for conflict in conflicting_lights:
-                if conflict.status != "GREEN":
-                    conflict.status = "GREEN"
-                    conflict.is_manual = True
-                    conflict.last_updated = datetime.now(timezone.utc)
-                    conflict.duration = light.duration # Sync duration
-                    
-                    # Update Redis for conflict
-                    await redis.set(f"traffic_light:{conflict.id}:status", "GREEN")
-                    await redis.set(f"traffic_light:{conflict.id}:end_time", end_time)
-                    
-                    # Add to batch
-                    updates.append({
-                        "light_id": conflict.id,
-                        "state": {
-                            "status": "GREEN",
-                            "end_time": end_time
-                        }
-                    })
-        
+            # Check if we should turn the cross-traffic GREEN
+            # This is complex because we don't want to override if the user specifically wanted ALL RED.
+            # But based on previous requirements: "Green -> Red: Automatically turns conflicting lights GREEN."
+            
+            for conflict_dir in conflicts.get(target_light.direction, []):
+                conflict_light = lights_by_dir.get(conflict_dir)
+                if conflict_light:
+                    conflict_light.status = "GREEN"
+                    conflict_light.is_manual = True
+                    conflict_light.last_updated = datetime.now(timezone.utc)
+                    conflict_light.duration = target_light.duration
+                    affected_lights.append(conflict_light)
+
         self.db.commit()
         
-        # Update Redis & Broadcast for Primary & Partner
+        # 4. Broadcast Updates
+        redis = await get_redis()
+        from app.api.v1.endpoints.websocket import broadcast_batch_update
         
-        # Primary
-        await redis.set(f"traffic_light:{light.id}:status", status)
-        await redis.set(f"traffic_light:{light.id}:end_time", end_time)
-        updates.append({
-            "light_id": light.id,
-            "state": {"status": status, "end_time": end_time}
-        })
+        end_time = (datetime.now(timezone.utc) + timedelta(seconds=target_light.duration)).timestamp()
+        updates = []
         
-        if partner_light:
-            await redis.set(f"traffic_light:{partner_light.id}:status", status)
-            await redis.set(f"traffic_light:{partner_light.id}:end_time", end_time)
+        # We iterate over all lights to ensure we capture every state change
+        for light in all_lights:
+            # Update Redis
+            await redis.set(f"traffic_light:{light.id}:status", light.status)
+            await redis.set(f"traffic_light:{light.id}:end_time", end_time)
+            
             updates.append({
-                "light_id": partner_light.id,
-                "state": {"status": status, "end_time": end_time}
+                "light_id": light.id,
+                "state": {
+                    "status": light.status,
+                    "end_time": end_time
+                }
             })
             
-        # Send all updates in one batch
         if updates:
             await broadcast_batch_update(updates)
 
@@ -333,16 +317,79 @@ class TrafficController:
                         await redis.set(phase_end_key, new_end_time)
                         
                         # Broadcast Updates
+                        batch_updates = []
+                        
+                        # Helper to get duration
+                        def get_duration(dir_code):
+                            # dir_code: 'ns' or 'ew'
+                            if dir_code == 'ns':
+                                l = ns_lights[0]
+                                return l.duration if l else 60
+                            else:
+                                l = ew_lights[0]
+                                return l.duration if l else 60
+
+                        ns_dur = get_duration('ns')
+                        ew_dur = get_duration('ew')
+                        
                         for light_id, status in updates:
-                            # Update individual light keys for UI compatibility
-                            await redis.set(f"traffic_light:{light_id}:status", status)
-                            await redis.set(f"traffic_light:{light_id}:end_time", new_end_time)
+                            # Determine direction of this light
+                            light_dir = None
+                            for l in lights:
+                                if l.id == light_id:
+                                    light_dir = l.direction
+                                    break
                             
-                            try:
-                                await broadcast_state_update(light_id, {
+                            # Calculate specific end_time
+                            # Default to current phase end
+                            calculated_end_time = new_end_time
+                            
+                            if status == "RED":
+                                # Calculate time until GREEN
+                                remaining_seconds = 0
+                                
+                                if light_dir in ["North", "South"]:
+                                    # Waiting for N/S Green (Phase 0)
+                                    if next_phase == 2: # All Red (2s) -> E/W Green -> E/W Yellow -> All Red -> N/S Green
+                                        remaining_seconds = 2 + ew_dur + 4 + 2
+                                    elif next_phase == 3: # E/W Green
+                                        remaining_seconds = ew_dur + 4 + 2
+                                    elif next_phase == 4: # E/W Yellow
+                                        remaining_seconds = 4 + 2
+                                    elif next_phase == 5: # All Red
+                                        remaining_seconds = 2
+                                        
+                                elif light_dir in ["East", "West"]:
+                                    # Waiting for E/W Green (Phase 3)
+                                    if next_phase == 5: # All Red (2s) -> N/S Green -> N/S Yellow -> All Red -> E/W Green
+                                        remaining_seconds = 2 + ns_dur + 4 + 2
+                                    elif next_phase == 0: # N/S Green
+                                        remaining_seconds = ns_dur + 4 + 2
+                                    elif next_phase == 1: # N/S Yellow
+                                        remaining_seconds = 4 + 2
+                                    elif next_phase == 2: # All Red
+                                        remaining_seconds = 2
+                                
+                                if remaining_seconds > 0:
+                                    calculated_end_time = (datetime.now(timezone.utc) + timedelta(seconds=remaining_seconds)).timestamp()
+
+                            # Update individual light keys for UI compatibility
+                            # Note: We store the calculated end time in Redis so new clients get the correct countdown
+                            await redis.set(f"traffic_light:{light_id}:status", status)
+                            await redis.set(f"traffic_light:{light_id}:end_time", calculated_end_time)
+                            
+                            batch_updates.append({
+                                "light_id": light_id,
+                                "state": {
                                     "status": status,
-                                    "end_time": new_end_time
-                                })
+                                    "end_time": calculated_end_time
+                                }
+                            })
+                            
+                        if batch_updates:
+                            try:
+                                from app.api.v1.endpoints.websocket import broadcast_batch_update
+                                await broadcast_batch_update(batch_updates)
                             except Exception as e:
                                 print(f"Broadcast error: {e}")
 
