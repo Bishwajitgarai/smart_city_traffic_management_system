@@ -31,7 +31,7 @@ Launch the server with hot-reloading:
 uv run main.py
 ```
 
-Access the dashboard at: **http://localhost:8001/api/v1/frontend/**
+Access the dashboard at: **http://localhost:8000/api/v1/frontend/**
 
 ---
 
@@ -104,8 +104,7 @@ uv run reset_system.py
 
 ## 🐛 Troubleshooting
 
-### Port Conflicts
-If port 8000 is busy, the app defaults to **8001**. Check the console output for the active URL.
+
 
 ### Redis Connection
 Ensure Redis is running. If you see connection errors, restart the Docker container:
