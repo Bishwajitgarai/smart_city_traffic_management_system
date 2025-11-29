@@ -54,6 +54,26 @@ Take control of any intersection. The system includes **"Smart Switching"** logi
 The top-level administrative unit. Create cities to group your traffic zones.
 
 ![City Management UI](docs/images/add_city_modal.png)
+
+### 4. Area Management
+Divide cities into distinct areas (e.g., "Downtown", "Uptown") for granular organization.
+
+![Area Management UI](docs/images/add_area_modal.png)
+
+### 5. Intersection Management
+The core of the system. Add intersections with precise coordinates and link them to areas.
+
+![Intersection Management UI](docs/images/add_Intersection_modal.png)
+
+### 6. Favorites Dashboard
+**Quick Access to Key Intersections**
+- **Default Home View**: The application now opens directly to your Favorites Dashboard.
+- **Unified View**: Monitor all your starred intersections from different cities and areas in one single grid.
+- **Real-Time Control**: Full manual control and monitoring capabilities are available directly from this view.
+- **One-Click Navigation**: Click "View Favorites" in the sidebar anytime to return to this dashboard.
+
+![Favorites Dashboard](docs/images/favorites_view.png)
+
 ## 🛠️ Architecture
 
 - **Backend**: FastAPI (Python)
