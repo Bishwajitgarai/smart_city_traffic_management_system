@@ -1,5 +1,6 @@
 import { state } from './config.js';
 import { generateBuildings, generateCarHtml } from './visuals.js';
+import { toggleFavorite, fetchCityDetails, fetchAreaDetails } from './api.js';
 
 export function renderCityTree() {
     const tree = document.getElementById('cityTree');
@@ -91,7 +92,14 @@ export function createIntersectionCard(intersection, area) {
     });
 
     card.innerHTML = `
-        <div class="card-title">${intersection.name}</div>
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div class="card-title" style="margin-bottom: 0;">${intersection.name}</div>
+            <span class="favorite-star ${intersection.is_favorite ? 'active' : ''}" 
+                  onclick="window.toggleFavoriteUI(${intersection.id}, ${!intersection.is_favorite}, event)"
+                  style="cursor: pointer; font-size: 1.2rem; transition: transform 0.2s;">
+                ${intersection.is_favorite ? '⭐' : '☆'}
+            </span>
+        </div>
         <small style="color: #94a3b8; display: block; margin-bottom: 1rem;">${area.name}</small>
         
         <div class="intersection-visual">
@@ -240,3 +248,126 @@ export function populateDropdowns() {
         }
     });
 }
+
+window.toggleFavoriteUI = async function(id, isFavorite, event) {
+    if (event) event.stopPropagation();
+    
+    try {
+        const result = await toggleFavorite(id, isFavorite);
+        
+        // Update UI immediately
+        const star = event.target;
+        if (result.is_favorite) {
+            star.classList.add('active');
+            star.textContent = '⭐';
+        } else {
+            star.classList.remove('active');
+            star.textContent = '☆';
+        }
+        
+        // Update local state if needed
+        state.cities.forEach(city => {
+            if (city.areas) {
+                city.areas.forEach(area => {
+                    if (area.intersections) {
+                        const intersection = area.intersections.find(i => i.id === id);
+                        if (intersection) {
+                            intersection.is_favorite = result.is_favorite;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Refresh favorites page if active
+        if (state.selectedAreaId === 'favorites') {
+            renderFavoritesPage();
+        }
+        
+    } catch (error) {
+        console.error('Failed to toggle favorite:', error);
+        alert('Failed to update favorite status');
+    }
+};
+export async function renderFavoritesPage() {
+    console.log("renderFavoritesPage called");
+    const grid = document.getElementById('intersectionsGrid');
+    if (!grid) {
+        console.error("Grid not found!");
+        return;
+    }
+    
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #94a3b8;">Loading favorites...</div>';
+    state.selectedAreaId = 'favorites';
+    document.querySelectorAll('.area-item').forEach(el => el.classList.remove('active'));
+    
+    // Ensure we have all data loaded
+    try {
+        // We need to iterate all cities and areas to check for favorites
+        // This might be heavy if there are many, but for now it's necessary
+        // because favorites can be anywhere.
+        // A better backend endpoint /api/v1/favorites would be ideal, but let's fix it frontend-side first.
+        
+        for (const city of state.cities) {
+            if (!city.areas) {
+                try {
+                    const cityData = await fetchCityDetails(city.id);
+                    city.areas = cityData.areas;
+                } catch (e) {
+                    console.error(`Failed to load areas for city ${city.id}`, e);
+                }
+            }
+            
+            if (city.areas) {
+                for (const area of city.areas) {
+                    if (!area.intersections) {
+                        try {
+                            const areaData = await fetchAreaDetails(area.id);
+                            area.intersections = areaData.intersections;
+                        } catch (e) {
+                            console.error(`Failed to load intersections for area ${area.id}`, e);
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error loading data for favorites:", e);
+    }
+    
+    grid.innerHTML = '';
+    let hasFavorites = false;
+    
+    state.cities.forEach(city => {
+        if (city.areas) {
+            city.areas.forEach(area => {
+                if (area.intersections) {
+                    area.intersections.forEach(intersection => {
+                        if (intersection.is_favorite) {
+                            hasFavorites = true;
+                            grid.appendChild(createIntersectionCard(intersection, area));
+                        }
+                    });
+                }
+            });
+        }
+    });
+    
+    if (!hasFavorites) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8;">
+                <div style="font-size: 3rem; margin-bottom: 20px;">⭐</div>
+                <h3>No Favorites Yet</h3>
+                <p>Star intersections to see them here!</p>
+            </div>
+        `;
+    }
+    
+    // Sync state to ensure lights are correct
+    if (window.syncState) {
+        window.syncState();
+    }
+}
+
+// Expose to window
+window.renderFavoritesPage = renderFavoritesPage;

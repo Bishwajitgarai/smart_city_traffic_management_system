@@ -81,3 +81,20 @@ async def reset_intersection(
         
     db.commit()
     return {"message": "Intersection reset to automatic mode"}
+
+class FavoriteUpdate(BaseModel):
+    is_favorite: bool
+
+@router.put("/{intersection_id}/favorite")
+def toggle_favorite(
+    intersection_id: int,
+    favorite: FavoriteUpdate,
+    db: Session = Depends(get_db)
+):
+    intersection = db.query(Intersection).filter(Intersection.id == intersection_id).first()
+    if not intersection:
+        raise HTTPException(status_code=404, detail="Intersection not found")
+    
+    intersection.is_favorite = favorite.is_favorite
+    db.commit()
+    return {"message": "Favorite status updated", "is_favorite": intersection.is_favorite}

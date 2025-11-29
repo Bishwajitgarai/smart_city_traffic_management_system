@@ -7,6 +7,7 @@ class IntersectionResponseNested(BaseModel):
     name: str
     code: str
     location: str
+    is_favorite: bool = False
     traffic_lights: List[TrafficLightResponse] = []
 
     class Config:

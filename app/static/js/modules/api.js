@@ -50,6 +50,34 @@ export async function updateLightManual(id, status, duration) {
     });
 }
 
+export async function resetIntersection(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/intersections/${id}/reset`, {
+            method: 'POST'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error resetting intersection:', error);
+        throw error;
+    }
+}
+
+export async function toggleFavorite(id, isFavorite) {
+    try {
+        const response = await fetch(`/api/v1/intersections/${id}/favorite`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_favorite: isFavorite })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        throw error;
+    }
+}
+
 export async function updateLightDuration(id, duration) {
     return await fetch(`/api/v1/admin/traffic-lights/${id}/duration?duration=${duration}`, {
         method: 'PUT'

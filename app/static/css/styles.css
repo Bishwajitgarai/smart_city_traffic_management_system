@@ -55,45 +55,6 @@ header {
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 2.5rem;
-    font-weight: 700;
-}
-
-.subtitle {
-    color: rgba(255, 255, 255, 0.7);
-    margin-top: 0.5rem;
-}
-
-.header-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-.btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-}
-
-.btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
     backdrop-filter: blur(10px);
 }
 
@@ -1407,10 +1368,210 @@ header {
 
 .modal-actions .btn-submit {
     background: #3b82f6;
+    margin-top: 10px;
+    /* Space for roof */
+}
+
+.house::before {
+    /* Roof */
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 12px solid #475569;
+    /* Roof color */
+}
+
+.house::after {
+    /* Door/Window */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 8px;
+    width: 8px;
+    height: 12px;
+    background: #334155;
+    border-radius: 2px 2px 0 0;
+}
+
+/* House Variants */
+.house.brick {
+    background: #9f1239;
+}
+
+.house.brick::before {
+    border-bottom-color: #451a03;
+}
+
+.house.brick::after {
+    background: #451a03;
+}
+
+.house.cottage {
+    background: #fcd34d;
+}
+
+.house.cottage::before {
+    border-bottom-color: #78350f;
+}
+
+.house.cottage::after {
+    background: #78350f;
+}
+
+.house.modern {
+    background: #94a3b8;
+}
+
+.house.modern::before {
+    border-bottom-color: #0f172a;
+}
+
+/* Offices */
+.office {
+    width: 30px;
+    background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+    border: 1px solid #64748b;
+    position: relative;
+    border-radius: 2px;
+}
+
+.office::after {
+    /* Glass Windows Grid */
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background-image:
+        linear-gradient(#3b82f6 1px, transparent 1px),
+        linear-gradient(90deg, #3b82f6 1px, transparent 1px);
+    background-size: 6px 8px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 1px solid #475569;
+}
+
+.office.tall {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.office.tall::after {
+    background-image:
+        linear-gradient(#60a5fa 1px, transparent 1px),
+        linear-gradient(90deg, #60a5fa 1px, transparent 1px);
+    background-color: rgba(30, 58, 138, 0.3);
+}
+
+/* Trees */
+.tree {
+    width: 16px;
+    height: 16px;
+    position: relative;
+    margin: 0 2px;
+}
+
+.tree::before {
+    /* Trunk */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 6px;
+    width: 4px;
+    height: 6px;
+    background: #451a03;
+}
+
+.tree::after {
+    /* Foliage */
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    background: #15803d;
+    border-radius: 50%;
+    box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.tree.pine::after {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.status-dot.green {
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.status-dot.red {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.status-dot.yellow {
+    background: #eab308;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.modal-actions .btn-cancel {
+    background: #334155;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+}
+
+.modal-actions .btn-cancel:hover {
+    background: #475569;
+}
+
+.modal-actions .btn-secondary {
+    background: #475569;
     color: white;
     border: none;
 }
 
-.modal-actions .btn-submit:hover {
-    background: #2563eb;
+.modal-actions .btn-secondary:hover {
+    background: #334155;
+}
+
+.modal-actions .btn-submit {
+    background: #3b82f6;
+    color: white;
+    border: none;
+}
+
+.favorite-star:hover {
+    transform: scale(1.2);
+}
+
+.favorite-star.active {
+    color: #ffd700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
 }

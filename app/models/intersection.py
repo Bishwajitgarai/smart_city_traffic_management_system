@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
@@ -10,6 +10,7 @@ class Intersection(Base):
     name = Column(String, index=True)
     code = Column(String, unique=True, index=True)
     location = Column(String)
+    is_favorite = Column(Boolean, default=False)
     
     area = relationship("TrafficArea", back_populates="intersections")
     traffic_lights = relationship("TrafficLight", back_populates="intersection")

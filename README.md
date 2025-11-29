@@ -54,19 +54,6 @@ Take control of any intersection. The system includes **"Smart Switching"** logi
 The top-level administrative unit. Create cities to group your traffic zones.
 
 ![City Management UI](docs/images/add_city_modal.png)
-
-### 4. Area Management
-Divide cities into distinct areas (e.g., "Downtown", "Uptown") for granular organization.
-
-![Area Management UI](docs/images/add_area_modal.png)
-
-### 5. Intersection Management
-The core of the system. Add intersections with precise coordinates and link them to areas.
-
-![Intersection Management UI](docs/images/add_Intersection_modal.png)
-
----
-
 ## 🛠️ Architecture
 
 - **Backend**: FastAPI (Python)
