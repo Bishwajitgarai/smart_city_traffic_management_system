@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <h2>Intersections</h2>
+    <div class="intersections-grid">
+        {% for intersection in intersections %}
+        <div class="intersection-card">
+            <h3>{{ intersection.name }}</h3>
+            <p>{{ intersection.location }}</p>
+            <div class="traffic-lights">
+                {% for light in intersection.traffic_lights %}
+                <div class="traffic-light" id="light-{{ light.id }}">
+                    <div class="light red {% if light.status == 'RED' %}active{% endif %}"></div>
+                    <div class="light yellow {% if light.status == 'YELLOW' %}active{% endif %}"></div>
+                    <div class="light green {% if light.status == 'GREEN' %}active{% endif %}"></div>
+                    <div class="info">
+                        <span>{{ light.direction }}</span>
+                        <span>Density: {{ light.current_density }}</span>
+                    </div>
+                    <!-- Simulation Controls -->
+                    <div class="controls">
+                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=10" hx-swap="none">Low</button>
+                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=50" hx-swap="none">Med</button>
+                        <button hx-post="/api/v1/frontend/simulate/{{ light.id }}/density?value=90" hx-swap="none">High</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="refresh-btn" onclick="window.location.reload()">Refresh Status</button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
