@@ -76,10 +76,12 @@ class TrafficController:
         ).all()
         
         redis = await get_redis()
-        from app.api.v1.endpoints.websocket import broadcast_state_update
+        from app.api.v1.endpoints.websocket import broadcast_state_update, broadcast_batch_update
         
         # Calculate End Time (shared for all affected lights)
         end_time = (datetime.now(timezone.utc) + timedelta(seconds=light.duration)).timestamp()
+        
+        updates = []
         
         if status == "GREEN":
             for conflict in conflicting_lights:
@@ -93,10 +95,13 @@ class TrafficController:
                     await redis.set(f"traffic_light:{conflict.id}:status", "RED")
                     await redis.set(f"traffic_light:{conflict.id}:end_time", end_time)
                     
-                    # Broadcast update for conflict
-                    await broadcast_state_update(conflict.id, {
-                        "status": "RED",
-                        "end_time": end_time
+                    # Add to batch
+                    updates.append({
+                        "light_id": conflict.id,
+                        "state": {
+                            "status": "RED",
+                            "end_time": end_time
+                        }
                     })
         elif status == "RED":
             for conflict in conflicting_lights:
@@ -110,10 +115,13 @@ class TrafficController:
                     await redis.set(f"traffic_light:{conflict.id}:status", "GREEN")
                     await redis.set(f"traffic_light:{conflict.id}:end_time", end_time)
                     
-                    # Broadcast update for conflict
-                    await broadcast_state_update(conflict.id, {
-                        "status": "GREEN",
-                        "end_time": end_time
+                    # Add to batch
+                    updates.append({
+                        "light_id": conflict.id,
+                        "state": {
+                            "status": "GREEN",
+                            "end_time": end_time
+                        }
                     })
         
         self.db.commit()
@@ -123,11 +131,22 @@ class TrafficController:
         # Primary
         await redis.set(f"traffic_light:{light.id}:status", status)
         await redis.set(f"traffic_light:{light.id}:end_time", end_time)
-        await broadcast_state_update(light.id, {"status": status, "end_time": end_time})
+        updates.append({
+            "light_id": light.id,
+            "state": {"status": status, "end_time": end_time}
+        })
+        
         if partner_light:
             await redis.set(f"traffic_light:{partner_light.id}:status", status)
             await redis.set(f"traffic_light:{partner_light.id}:end_time", end_time)
-            await broadcast_state_update(partner_light.id, {"status": status, "end_time": end_time})
+            updates.append({
+                "light_id": partner_light.id,
+                "state": {"status": status, "end_time": end_time}
+            })
+            
+        # Send all updates in one batch
+        if updates:
+            await broadcast_batch_update(updates)
 
     async def reset_manual_state(self, light_id: int):
         light = self.db.query(TrafficLight).filter(TrafficLight.id == light_id).first()

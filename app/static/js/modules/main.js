@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(async () => {
             await renderFavoritesPage();
             console.log("Favorites Page Rendered");
+            // Initial sync after DOM is ready
+            if (window.syncState) window.syncState();
         }, 500);
     } catch (error) {
         console.error("Error during startup:", error);

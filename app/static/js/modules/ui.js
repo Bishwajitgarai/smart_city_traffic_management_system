@@ -209,7 +209,6 @@ export function startCountdown(lightId, endTime) {
         
         if (remaining === 0) {
             clearInterval(state.countdownIntervals[lightId]);
-            setTimeout(() => window.syncState(), 1000);
         }
     }, 100);
 }
@@ -363,10 +362,6 @@ export async function renderFavoritesPage() {
         `;
     }
     
-    // Sync state to ensure lights are correct
-    if (window.syncState) {
-        window.syncState();
-    }
 }
 
 // Expose to window

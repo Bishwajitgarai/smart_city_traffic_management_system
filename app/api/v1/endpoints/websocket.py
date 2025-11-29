@@ -46,3 +46,10 @@ async def broadcast_state_update(light_id: int, state: dict):
         "light_id": light_id,
         "state": state
     })
+
+async def broadcast_batch_update(updates: list):
+    """Helper function to broadcast multiple state updates"""
+    await manager.broadcast({
+        "type": "batch_state_update",
+        "updates": updates
+    })
