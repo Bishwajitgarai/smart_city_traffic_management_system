@@ -251,7 +251,7 @@ class TrafficController:
                             
                         # Phase Expired -> Transition to Next Phase
                         next_phase = (current_phase + 1) % 6
-                        print(f"Intersection {intersection.id}: Phase {current_phase} -> {next_phase}")
+                        # print(f"Intersection {intersection.id}: Phase {current_phase} -> {next_phase}")
                         
                         lights = db.query(TrafficLight).filter(
                             TrafficLight.intersection_id == intersection.id,
