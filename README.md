@@ -117,5 +117,5 @@ docker-compose restart redis
 MIT License
 
 ## 👤 Author
-**Smart City Traffic Team**
+**Bishwajit Garai**
 *Building the future of urban mobility.*
