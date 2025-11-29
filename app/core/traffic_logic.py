@@ -104,7 +104,6 @@ class TrafficController:
                     conflict_light.is_manual = True
                     conflict_light.last_updated = datetime.now(timezone.utc)
                     conflict_light.duration = target_light.duration
-                    affected_lights.append(conflict_light)
 
         self.db.commit()
         
