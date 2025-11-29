@@ -1,145 +1,104 @@
-# Smart City Traffic Management System
-- **Database**: SQLite with SQLAlchemy ORM
-- **Caching**: Redis for real-time state
-- **Frontend**: Vanilla JS + Modern CSS
-- **Deployment**: Docker Compose
-- **Package Manager**: UV (ultra-fast Python package installer)
+# 🚦 Smart City Traffic Management System
 
-## 📦 Installation
+![Dashboard Overview](docs/images/dashboard_overview.png)
 
-### Using Docker (Recommended)
+A next-generation traffic control system built with **FastAPI**, **Redis**, and **Vanilla JS**. Designed for real-time traffic simulation, manual overrides, and adaptive control logic.
+
+## 🚀 Quick Start
+
+This project uses **uv** for ultra-fast dependency management.
+
+### Prerequisites
+- Python 3.12+
+- Docker (for Redis)
+- `uv` (Install via `pip install uv`)
+
+### 1. Start Infrastructure
+Start the Redis instance using Docker:
 ```bash
-docker-compose up --build
+docker-compose up -d
 ```
 
-### Local Development
+### 2. Install Dependencies
+Sync the project environment:
 ```bash
-# Install dependencies
 uv sync
-
-# Run the application  
-uv run uvicorn app.main:app --reload
 ```
 
-Access at: **http://localhost:8000/api/v1/frontend/**
+### 3. Run the Application
+Launch the server with hot-reloading:
+```bash
+uv run main.py
+```
 
-## 🎯 Usage Guide
+Access the dashboard at: **http://localhost:8001/api/v1/frontend/**
+
+---
+
+## 🌟 Key Features
+
+### 1. Real-Time Traffic Visualization
+Watch cars move through intersections with smooth animations. The system tracks individual vehicles and updates their position in real-time via WebSockets.
+
+![Traffic Flow](docs/images/traffic_flow.png)
+
+### 2. Smart Manual Control
+Take control of any intersection. The system includes **"Smart Switching"** logic:
+- **Red -> Green**: Automatically turns conflicting lights RED.
+- **Green -> Red**: Automatically turns conflicting lights GREEN.
+- **Cycle Alignment**: Manual overrides sync with the background cycle for smooth transitions.
+
+![Manual Control](docs/images/manual_control.png)
+
+### 3. City Management
+Easily add new Cities, Areas, and Intersections through a modern, modal-based UI.
+
+![Add City Modal](docs/images/add_city_modal.png)
+
+---
+
+## 🛠️ Architecture
+
+- **Backend**: FastAPI (Python)
+- **Database**: SQLite + SQLAlchemy (Async)
+- **State Management**: Redis (Real-time phase tracking)
+- **Frontend**: HTML5, CSS3 (Glassmorphism), Vanilla JS
+- **Communication**: WebSockets (State broadcasting)
+
+## 🎮 Usage Guide
 
 ### Dashboard Navigation
+1.  **Sidebar**: Browse Cities and Areas. Click to filter the view.
+2.  **Intersection Cards**: View real-time status of each intersection.
 
-1. **Sidebar**: Click on cities to expand/collapse areas
-2. **Select Area**: Click an area name to filter intersections
-3. **View All**: Reload page to see all intersections again
+### Manual Override
+1.  Click the **"⚙️ Manage"** button on any intersection.
+2.  Select a direction (N/S or E/W).
+3.  Choose a status (Red/Green/Yellow).
+4.  Set a duration (e.g., 30s).
+5.  Click **"Apply Override"**.
+    *   *Note: The system will automatically handle conflicting lights to prevent accidents.*
 
-### Managing Traffic Lights
-
-1. **View Status**: See real-time countdown timers
-2. **Manual Control**: Click "⚙️ Manage" button
-3. **Change Status**: Select RED/YELLOW/GREEN
-4. **Adjust Duration**: Set timer (5-300 seconds)
-
-### Admin Operations
-
-#### Add City
-1. Click "+ Add City" button
-2. Enter name and code
-3. Save
-
-#### Add Area
-1. Click "+ Add Area" button
-2. Select parent city
-3. Enter area name and code
-4. Save
-
-## 🔄 How It Works
-
-### Automatic Light Cycling
-- Lights change based on traffic density
-- Higher density = longer green time
-- WebSocket broadcasts state changes in real-time
-
-### Real-time Countdown
-- Client-side countdown for smooth UX
-- Server provides end_time via WebSocket
-- Auto-refreshes when timer reaches zero
-
-## 📡 API Endpoints
-
-### Cities
-- `POST /api/v1/cities/` - Create
-- `GET /api/v1/cities/` - List all
-- `PUT /api/v1/cities/{id}` - Update
-- `DELETE /api/v1/cities/{id}` - Delete
-
-### Areas
-- `POST /api/v1/areas/` - Create
-- `GET /api/v1/areas/` - List all
-- `PUT /api/v1/areas/{id}` - Update
-- `DELETE /api/v1/areas/{id}` - Delete
-
-### Traffic Control
-- `POST /api/v1/admin/traffic-lights/{id}/manual` - Manual override
-- `PUT /api/v1/admin/traffic-lights/{id}/duration` - Update duration
-
-### WebSocket
-- `WS /api/v1/ws` - Real-time updates
-
-## 🎨 UI Features
-
-- **Glassmorphism Cards**: Semi-transparent with backdrop blur
-- **Gradient Backgrounds**: Purple-blue theme
-- **Pulse Animations**: Active lights pulse realistically
-- **Collapsible Sidebar**: Save screen space
-- **Responsive Design**: Works on all devices
-
-## 📁 Project Structure
-
-```
-app/
-├── api/v1/endpoints/
-│   ├── cities.py          # City CRUD
-│   ├── areas.py           # Area CRUD
-│   ├── admin.py           # Admin controls
-│   ├── websocket.py       # WebSocket handler
-│   └── frontend.py        # Dashboard routes
-├── core/
-│   ├── config.py          # Settings
-│   └── traffic_logic.py   # Control logic
-├── models/                # SQLAlchemy models
-├── schemas/               # Pydantic schemas
-├── static/
-│   ├── css/styles.css     # Modern styling
-│   └── js/app.js          # Frontend logic
-└── templates/
-    └── dashboard.html     # Main UI
-```
-
-## 🔧 Configuration
-
-Edit `.env` file:
+### System Reset
+If you need to wipe the database and start fresh:
 ```bash
-DATABASE_URL=sqlite:///./traffic.db
-REDIS_URL=redis://localhost:6379/0
+uv run reset_system.py
 ```
 
 ## 🐛 Troubleshooting
 
-### Redis Connection Issues
-- Ensure Redis is running: `docker-compose up redis`
-- Check `REDIS_URL` in `.env`
+### Port Conflicts
+If port 8000 is busy, the app defaults to **8001**. Check the console output for the active URL.
 
-### WebSocket Not Connecting
-- Check browser console for errors
-- Verify server is running on correct port
-
-### Timer Not Updating
-- Ensure JavaScript is enabled
-- Check WebSocket connection status
+### Redis Connection
+Ensure Redis is running. If you see connection errors, restart the Docker container:
+```bash
+docker-compose restart redis
+```
 
 ## 📝 License
-
 MIT License
 
 ## 👤 Author
-
-Smart City Traffic Management System - Production Ready
+**Smart City Traffic Team**
+*Building the future of urban mobility.*
