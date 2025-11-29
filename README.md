@@ -53,7 +53,7 @@ Take control of any intersection. The system includes **"Smart Switching"** logi
 ### 3. City Management
 The top-level administrative unit. Create cities to group your traffic zones.
 
-![City Management UI](docs/images/modal_fix.png)
+![City Management UI](docs/images/add_city_modal.png)
 
 ### 4. Area Management
 Divide cities into distinct areas (e.g., "Downtown", "Uptown") for granular organization.
