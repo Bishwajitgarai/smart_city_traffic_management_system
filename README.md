@@ -50,15 +50,20 @@ Take control of any intersection. The system includes **"Smart Switching"** logi
 
 ![Manual Control](docs/images/manual_control.png)
 
-### 3. City, Area & Intersection Management
-The system provides a unified interface to manage your city's hierarchy. You can easily add and configure:
-- **Cities**: The top-level administrative units.
-- **Areas**: Distinct zones within a city for granular control.
-- **Intersections**: Traffic nodes with precise coordinate placement.
+### 3. City Management
+The top-level administrative unit. Create cities to group your traffic zones.
 
-All management forms use a consistent, modern modal UI.
+![City Management UI](docs/images/modal_fix.png)
 
-![Management Modal UI](docs/images/modal_fix.png)
+### 4. Area Management
+Divide cities into distinct areas (e.g., "Downtown", "Uptown") for granular organization.
+
+![Area Management UI](docs/images/add_area_modal.png)
+
+### 5. Intersection Management
+The core of the system. Add intersections with precise coordinates and link them to areas.
+
+![Intersection Management UI](docs/images/add_Intersection_modal.png)
 
 ---
 
