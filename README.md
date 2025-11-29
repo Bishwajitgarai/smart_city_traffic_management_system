@@ -55,6 +55,16 @@ Easily add new Cities, Areas, and Intersections through a modern, modal-based UI
 
 ![City Management UI](docs/images/modal_fix.png)
 
+### 4. Area Management
+Organize your city into distinct areas for granular traffic control.
+
+![Area Management UI](docs/images/add_area_modal.png)
+
+### 5. Intersection Management
+Add and configure intersections with precise coordinate placement.
+
+![Intersection Management UI](docs/images/add_intersection_modal.png)
+
 ---
 
 ## 🛠️ Architecture
