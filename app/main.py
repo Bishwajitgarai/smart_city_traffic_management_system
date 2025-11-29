@@ -22,7 +22,6 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-@app.on_event("startup")
 def seed_data():
     db = SessionLocal()
     if not db.query(City).first():
@@ -66,10 +65,27 @@ def seed_data():
             db.commit()
     db.close()
 
+@app.on_event("startup")
+async def startup_event():
+    # Seed data
+    seed_data()
+    
+    # Start background task
+    import asyncio
+    from app.core.traffic_logic import TrafficController
+    from app.db.session import SessionLocal
+    
+    # We need to run this in the background
+    loop = asyncio.get_running_loop()
+    # Create a persistent session for the background task
+    db = SessionLocal()
+    controller = TrafficController(db)
+    loop.create_task(controller.run_cycle())
+
 @app.get("/")
 def root():
     return RedirectResponse(url=settings.API_V1_STR + "/frontend/")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

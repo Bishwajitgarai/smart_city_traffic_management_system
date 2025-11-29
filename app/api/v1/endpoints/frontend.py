@@ -9,11 +9,18 @@ from app.core.traffic_logic import TrafficController
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-from app.models.city import City
+from app.models.city import City, TrafficArea
+from app.models.intersection import Intersection
+from app.models.traffic import TrafficLight
+from sqlalchemy.orm import joinedload
 
 @router.get("/")
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    cities = db.query(City).all()
+    cities = db.query(City).options(
+        joinedload(City.areas)
+        .joinedload(TrafficArea.intersections)
+        .joinedload(Intersection.traffic_lights)
+    ).all()
     return templates.TemplateResponse("dashboard.html", {"request": request, "cities": cities})
 
 @router.post("/simulate/{light_id}/density")

@@ -1,50 +1,145 @@
 # Smart City Traffic Management System
+- **Database**: SQLite with SQLAlchemy ORM
+- **Caching**: Redis for real-time state
+- **Frontend**: Vanilla JS + Modern CSS
+- **Deployment**: Docker Compose
+- **Package Manager**: UV (ultra-fast Python package installer)
 
-A production-ready backend and dashboard for managing smart city traffic lights, built with FastAPI, SQLite, Redis, and Docker.
+## 📦 Installation
 
-## Features
+### Using Docker (Recommended)
+```bash
+docker-compose up --build
+```
 
--   **Dashboard**: Real-time visualization of traffic intersections and light status.
--   **Adaptive Control**: Traffic lights automatically cycle based on simulated traffic density.
--   **Simulation**: Manually adjust traffic density to test the adaptive logic.
--   **REST API**: Fully documented API for external integration.
--   **Containerized**: Easy deployment with Docker.
+### Local Development
+```bash
+# Install dependencies
+uv sync
 
-## Tech Stack
+# Run the application  
+uv run uvicorn app.main:app --reload
+```
 
--   **Backend**: FastAPI (Python 3.12)
--   **Database**: SQLite (SQLAlchemy ORM)
--   **Caching**: Redis
--   **Frontend**: Jinja2 Templates + HTMX
--   **Dependency Management**: `uv`
+Access at: **http://localhost:8000/api/v1/frontend/**
 
-## Getting Started
+## 🎯 Usage Guide
 
-### Prerequisites
+### Dashboard Navigation
 
--   Docker & Docker Compose
+1. **Sidebar**: Click on cities to expand/collapse areas
+2. **Select Area**: Click an area name to filter intersections
+3. **View All**: Reload page to see all intersections again
 
-### Running the Project
+### Managing Traffic Lights
 
-1.  Clone the repository.
-2.  Start the services:
-    ```bash
-    docker-compose up --build
-    ```
-3.  Access the application:
-    -   **Dashboard**: [http://localhost:8000/api/v1/frontend/](http://localhost:8000/api/v1/frontend/)
-    -   **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+1. **View Status**: See real-time countdown timers
+2. **Manual Control**: Click "⚙️ Manage" button
+3. **Change Status**: Select RED/YELLOW/GREEN
+4. **Adjust Duration**: Set timer (5-300 seconds)
 
-## Usage
+### Admin Operations
 
-1.  Open the Dashboard.
-2.  You will see a sample intersection "Main St & 1st Ave".
-3.  Use the "Low", "Med", "High" buttons to simulate traffic density for a specific direction.
-4.  The system will automatically adjust the lights (logic runs in background/on-demand).
-5.  Click "Refresh Status" to see the latest state (or implement auto-refresh).
+#### Add City
+1. Click "+ Add City" button
+2. Enter name and code
+3. Save
 
-## API Endpoints
+#### Add Area
+1. Click "+ Add Area" button
+2. Select parent city
+3. Enter area name and code
+4. Save
 
--   `GET /api/v1/frontend/`: Dashboard view.
--   `POST /api/v1/frontend/simulate/{id}/density`: Update traffic density.
--   `GET /api/v1/traffic-lights/`: List all lights.
+## 🔄 How It Works
+
+### Automatic Light Cycling
+- Lights change based on traffic density
+- Higher density = longer green time
+- WebSocket broadcasts state changes in real-time
+
+### Real-time Countdown
+- Client-side countdown for smooth UX
+- Server provides end_time via WebSocket
+- Auto-refreshes when timer reaches zero
+
+## 📡 API Endpoints
+
+### Cities
+- `POST /api/v1/cities/` - Create
+- `GET /api/v1/cities/` - List all
+- `PUT /api/v1/cities/{id}` - Update
+- `DELETE /api/v1/cities/{id}` - Delete
+
+### Areas
+- `POST /api/v1/areas/` - Create
+- `GET /api/v1/areas/` - List all
+- `PUT /api/v1/areas/{id}` - Update
+- `DELETE /api/v1/areas/{id}` - Delete
+
+### Traffic Control
+- `POST /api/v1/admin/traffic-lights/{id}/manual` - Manual override
+- `PUT /api/v1/admin/traffic-lights/{id}/duration` - Update duration
+
+### WebSocket
+- `WS /api/v1/ws` - Real-time updates
+
+## 🎨 UI Features
+
+- **Glassmorphism Cards**: Semi-transparent with backdrop blur
+- **Gradient Backgrounds**: Purple-blue theme
+- **Pulse Animations**: Active lights pulse realistically
+- **Collapsible Sidebar**: Save screen space
+- **Responsive Design**: Works on all devices
+
+## 📁 Project Structure
+
+```
+app/
+├── api/v1/endpoints/
+│   ├── cities.py          # City CRUD
+│   ├── areas.py           # Area CRUD
+│   ├── admin.py           # Admin controls
+│   ├── websocket.py       # WebSocket handler
+│   └── frontend.py        # Dashboard routes
+├── core/
+│   ├── config.py          # Settings
+│   └── traffic_logic.py   # Control logic
+├── models/                # SQLAlchemy models
+├── schemas/               # Pydantic schemas
+├── static/
+│   ├── css/styles.css     # Modern styling
+│   └── js/app.js          # Frontend logic
+└── templates/
+    └── dashboard.html     # Main UI
+```
+
+## 🔧 Configuration
+
+Edit `.env` file:
+```bash
+DATABASE_URL=sqlite:///./traffic.db
+REDIS_URL=redis://localhost:6379/0
+```
+
+## 🐛 Troubleshooting
+
+### Redis Connection Issues
+- Ensure Redis is running: `docker-compose up redis`
+- Check `REDIS_URL` in `.env`
+
+### WebSocket Not Connecting
+- Check browser console for errors
+- Verify server is running on correct port
+
+### Timer Not Updating
+- Ensure JavaScript is enabled
+- Check WebSocket connection status
+
+## 📝 License
+
+MIT License
+
+## 👤 Author
+
+Smart City Traffic Management System - Production Ready

@@ -1,129 +1,161 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard-container">
-    <aside class="sidebar">
-        <h3>Cities</h3>
-        <ul class="city-list">
-            {% for city in cities %}
-            <li>
-                <details open>
-                    <summary>{{ city.name }}</summary>
-                    <ul>
-                        {% for area in city.areas %}
-                        <li>
-                            <details open>
-                                <summary>{{ area.name }}</summary>
-                                <ul>
-                                    {% for intersection in area.intersections %}
-                                    <li><a href="#intersection-{{ intersection.id }}">{{ intersection.name }}</a></li>
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </details>
-            </li>
-            {% endfor %}
-        </ul>
-    </aside>
+<div class="modern-dashboard">
+    <!-- Header with Actions -->
+    <div class="dashboard-header">
+        <div class="header-left">
+            <h1 class="gradient-text">Smart City Traffic Control</h1>
+            <p class="subtitle">Real-time Traffic Management System</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openModal('cityModal')">
+                <span>➕</span> Add City
+            </button>
+            <button class="btn btn-secondary" onclick="openModal('areaModal')">
+                <span>➕</span> Add Area
+            </button>
+            <button class="btn btn-secondary" onclick="openModal('intersectionModal')">
+                <span>➕</span> Add Intersection
+            </button>
+        </div>
+    </div>
 
-    <div class="main-content">
-        {% for city in cities %}
-            {% for area in city.areas %}
-                {% for intersection in area.intersections %}
-                <div id="intersection-{{ intersection.id }}" class="intersection-card">
-                    <div class="card-header">
-                        <h3>{{ intersection.name }} <span class="badge">{{ area.name }}</span></h3>
-                        <span class="location">{{ intersection.location }}</span>
-                    </div>
-                    
-                    <div class="traffic-lights-grid">
-                        {% for light in intersection.traffic_lights %}
-                        <div class="traffic-light-wrapper" id="light-{{ light.id }}" data-id="{{ light.id }}">
-                            <div class="traffic-light-body">
-                                <div class="light red"></div>
-                                <div class="light yellow"></div>
-                                <div class="light green"></div>
-                            </div>
-                            <div class="light-info">
-                                <span class="direction">{{ light.direction }}</span>
-                                <div class="timer">--</div>
-                                <div class="density-control">
-                                    <small>Density: <span class="density-val">{{ light.current_density }}</span></small>
-                                    <div class="btn-group">
-                                        <button onclick="updateDensity({{ light.id }}, 10)">Low</button>
-                                        <button onclick="updateDensity({{ light.id }}, 50)">Med</button>
-                                        <button onclick="updateDensity({{ light.id }}, 90)">High</button>
-                                    </div>
-                                </div>
-                                <div class="admin-control">
-                                    <button class="manual-btn" onclick="toggleManual({{ light.id }})">Manual Override</button>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            {% endfor %}
-        {% endfor %}
+    <!-- Main Layout -->
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="glass-sidebar">
+            <h3>Cities & Areas</h3>
+            <div id="cityTree" class="city-tree">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="intersectionsGrid" class="intersections-grid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </main>
     </div>
 </div>
 
-<script>
-    // Real-time Sync Logic
-    async function syncState() {
-        try {
-            const response = await fetch('/api/v1/frontend/sync');
-            const data = await response.json();
-            
-            for (const [id, state] of Object.entries(data)) {
-                updateLight(id, state);
-            }
-        } catch (e) {
-            console.error("Sync failed", e);
-        }
-    }
+<!-- Modals -->
+<div id="cityModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Manage City</h2>
+            <p class="modal-subtitle">Add or edit city details</p>
+        </div>
+        <form id="cityForm">
+            <input type="hidden" id="cityId">
+            <div class="form-group">
+                <label class="form-label">City Name</label>
+                <input type="text" id="cityName" placeholder="e.g. New York" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">City Code</label>
+                <input type="text" id="cityCode" placeholder="e.g. NYC" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal('cityModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Save City</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    function updateLight(id, state) {
-        const wrapper = document.getElementById(`light-${id}`);
-        if (!wrapper) return;
+<div id="areaModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Manage Area</h2>
+            <p class="modal-subtitle">Define a new traffic zone</p>
+        </div>
+        <form id="areaForm">
+            <input type="hidden" id="areaId">
+            <div class="form-group">
+                <label class="form-label">Parent City</label>
+                <select id="areaCity" required>
+                    <option value="">Select City</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Area Name</label>
+                <input type="text" id="areaName" placeholder="e.g. Downtown" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Area Code</label>
+                <input type="text" id="areaCode" placeholder="e.g. DT-01" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal('areaModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Save Area</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-        // Update Lights
-        wrapper.querySelectorAll('.light').forEach(el => el.classList.remove('active'));
-        const activeLight = wrapper.querySelector(`.light.${state.status.toLowerCase()}`);
-        if (activeLight) activeLight.classList.add('active');
+<div id="intersectionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Intersection</h2>
+            <p class="modal-subtitle">Create a new 4-way intersection</p>
+        </div>
+        <form id="intersectionForm">
+            <div class="form-group">
+                <label class="form-label">Area</label>
+                <select id="intersectionArea" required>
+                    <option value="">Select Area</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Intersection Name</label>
+                <input type="text" id="intersectionName" placeholder="e.g. 5th Ave & Main St" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Intersection Code</label>
+                <input type="text" id="intersectionCode" placeholder="e.g. INT-001" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Location Coordinates</label>
+                <input type="text" id="intersectionLocation" placeholder="e.g. 40.7128, -74.0060" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal('intersectionModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Create Intersection</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-        // Update Timer
-        const timerEl = wrapper.querySelector('.timer');
-        if (state.end_time) {
-            const now = Date.now() / 1000;
-            const remaining = Math.max(0, Math.ceil(state.end_time - now));
-            timerEl.textContent = remaining + "s";
-        } else {
-            timerEl.textContent = "--";
-        }
-    }
+<div id="lightModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Manual Control</h2>
+            <p class="modal-subtitle">Override automatic traffic logic</p>
+        </div>
+        <form id="lightForm">
+            <input type="hidden" id="lightId">
+            <div class="form-group">
+                <label class="form-label">Force Status</label>
+                <select id="lightStatus">
+                    <option value="RED">🔴 RED</option>
+                    <option value="YELLOW">🟡 YELLOW</option>
+                    <option value="GREEN">🟢 GREEN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Duration (seconds)</label>
+                <input type="number" id="lightDuration" min="5" max="300" value="60">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal('lightModal')">Cancel</button>
+                <button type="button" class="btn-secondary" id="resetLightBtn" style="background: #475569; margin-right: 10px;">Reset to Auto</button>
+                <button type="submit" class="btn-submit">Apply Override</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    async function updateDensity(id, val) {
-        await fetch(`/api/v1/frontend/simulate/${id}/density?value=${val}`, { method: 'POST' });
-    }
-
-    async function toggleManual(id) {
-        const status = prompt("Enter status (RED, YELLOW, GREEN):", "RED");
-        if (status) {
-            await fetch(`/api/v1/admin/traffic-lights/${id}/manual`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({status: status.toUpperCase(), duration: 60})
-            });
-        }
-    }
-
-    // Sync every 1 second
-    setInterval(syncState, 1000);
-    syncState(); // Initial call
-</script>
+<script type="module" src="/static/js/modules/main.js"></script>
 {% endblock %}
