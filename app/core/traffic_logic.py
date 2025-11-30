@@ -152,13 +152,12 @@ class TrafficController:
 
     async def run_cycle(self):
         """
-        Background task to cycle traffic lights using Real-World 6-Phase Logic:
+        Background task to cycle traffic lights using Optimized 4-Phase Logic:
         0: N/S GREEN  (Duration: light.duration)
         1: N/S YELLOW (Duration: 4s)
-        2: ALL RED    (Duration: 2s) - Safety Clearance
         3: E/W GREEN  (Duration: light.duration)
         4: E/W YELLOW (Duration: 4s)
-        5: ALL RED    (Duration: 2s) - Safety Clearance
+        (Phases 2 and 5 skipped for immediate transition)
         """
         from app.api.v1.endpoints.websocket import broadcast_state_update
         from app.db.session import SessionLocal
@@ -252,7 +251,13 @@ class TrafficController:
                             continue
                             
                         # Phase Expired -> Transition to Next Phase
-                        next_phase = (current_phase + 1) % 6
+                        # Phase Expired -> Transition to Next Phase
+                        if current_phase == 1:
+                            next_phase = 3
+                        elif current_phase == 4:
+                            next_phase = 0
+                        else:
+                            next_phase = (current_phase + 1) % 6
                         # print(f"Intersection {intersection.id}: Phase {current_phase} -> {next_phase}")
                         
                         lights = db.query(TrafficLight).filter(
@@ -286,11 +291,6 @@ class TrafficController:
                             set_lights(ew_lights, "RED")
                             next_duration = 4
                             
-                        elif next_phase == 2: # ALL RED (Clearance)
-                            set_lights(ns_lights, "RED")
-                            set_lights(ew_lights, "RED")
-                            next_duration = 2
-                            
                         elif next_phase == 3: # E/W GREEN
                             set_lights(ns_lights, "RED")
                             set_lights(ew_lights, "GREEN")
@@ -301,11 +301,6 @@ class TrafficController:
                             set_lights(ns_lights, "RED")
                             set_lights(ew_lights, "YELLOW")
                             next_duration = 4
-                            
-                        elif next_phase == 5: # ALL RED (Clearance)
-                            set_lights(ns_lights, "RED")
-                            set_lights(ew_lights, "RED")
-                            next_duration = 2
                         
                         # Commit DB
                         db.commit()
@@ -349,25 +344,17 @@ class TrafficController:
                                 
                                 if light_dir in ["North", "South"]:
                                     # Waiting for N/S Green (Phase 0)
-                                    if next_phase == 2: # All Red (2s) -> E/W Green -> E/W Yellow -> All Red -> N/S Green
-                                        remaining_seconds = 2 + ew_dur + 4 + 2
-                                    elif next_phase == 3: # E/W Green
-                                        remaining_seconds = ew_dur + 4 + 2
+                                    if next_phase == 3: # E/W Green
+                                        remaining_seconds = ew_dur + 4
                                     elif next_phase == 4: # E/W Yellow
-                                        remaining_seconds = 4 + 2
-                                    elif next_phase == 5: # All Red
-                                        remaining_seconds = 2
+                                        remaining_seconds = 4
                                         
                                 elif light_dir in ["East", "West"]:
                                     # Waiting for E/W Green (Phase 3)
-                                    if next_phase == 5: # All Red (2s) -> N/S Green -> N/S Yellow -> All Red -> E/W Green
-                                        remaining_seconds = 2 + ns_dur + 4 + 2
-                                    elif next_phase == 0: # N/S Green
-                                        remaining_seconds = ns_dur + 4 + 2
+                                    if next_phase == 0: # N/S Green
+                                        remaining_seconds = ns_dur + 4
                                     elif next_phase == 1: # N/S Yellow
-                                        remaining_seconds = 4 + 2
-                                    elif next_phase == 2: # All Red
-                                        remaining_seconds = 2
+                                        remaining_seconds = 4
                                 
                                 if remaining_seconds > 0:
                                     calculated_end_time = (datetime.now(timezone.utc) + timedelta(seconds=remaining_seconds)).timestamp()
