@@ -3,7 +3,7 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.base import Base
 from app.db.session import engine, SessionLocal
-
+import os
 from fastapi.staticfiles import StaticFiles
 from app.models.city import City, TrafficArea
 from app.models.intersection import Intersection
@@ -18,7 +18,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
